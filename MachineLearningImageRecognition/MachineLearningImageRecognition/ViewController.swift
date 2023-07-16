@@ -6,11 +6,15 @@
 //
 
 import UIKit
+import CoreML
+import Vision
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var resultLabel: UILabel!
+    
+    var chosenImage = CIImage()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,7 +36,38 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         imageView.image = info[.originalImage] as? UIImage
         self.dismiss(animated: true, completion: nil)
         
+        // CIImage
+        if let ciImage = CIImage(image: imageView.image!) {
+            chosenImage = ciImage
         }
+        
+        // recognition
+        recognizeImage(image: chosenImage)
+    }
+    
+    func recognizeImage(image: CIImage) {
+        
+        // 1- Request
+        
+        if let model = try? VNCoreMLModel(for: MobileNetV2().model) {
+            let request = VNCoreMLRequest(model: model) { (vnrequest, error) in
+                if let results = vnrequest.results as? [VNClassificationObservation] {
+                    if results.count > 0 {
+                        let topResult = results.first
+                        
+                        DispatchQueue.main.async {
+                            //
+                            let confidenceLevel = (topResult?.confidence ?? 0) * 100
+                            self.resultLabel.text = "It is \(topResult!.identifier) | \(confidenceLevel)%"
+                        }
+                    }
+                }
+            }
+        }
+        // 2- Handler
+        
+        
+    }
     
 }
 
